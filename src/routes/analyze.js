@@ -1,6 +1,7 @@
 const express = require('express');
 const { callGemini, GeminiError } = require('../gemini');
 const { insertTicket } = require('../db');
+const { sendRiskAlert } = require('../alert');
 
 const router = express.Router();
 
@@ -24,6 +25,9 @@ router.post('/analyze', async (req, res) => {
       exploitable: result.exploitable,
       risque: result.risque
     });
+    if (ticket.risque) {
+      sendRiskAlert(ticket); // fire-and-forget, ne doit pas retarder la réponse
+    }
     res.json(ticket);
   } catch (e) {
     if (e instanceof GeminiError) {

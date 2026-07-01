@@ -34,9 +34,11 @@ Le projet a évolué d'un PoC HTML statique (`unclutter.html`, conservé à la r
 - Cela répond au risque documenté ci-dessous ("clé API en clair côté navigateur") et permet d'ajouter un historique, des statistiques et un export.
 
 **Fonctionnalités ajoutées côté interface :**
-- **Historique** des tickets traités, cliquable pour recharger un ticket passé (sans nouvel appel à Gemini).
+- **Historique** des tickets traités, cliquable pour recharger un ticket passé (sans nouvel appel à Gemini), supprimable individuellement ou en totalité.
 - **Copier le ticket** au format texte prêt à coller dans GLPI, et **export** de tout l'historique en JSON ou CSV.
 - **Tableau de bord** : nombre total de tickets, exploitables, risques détectés, répartition par priorité.
+- **Suivi de traitement** : chaque ticket a un statut (`Nouveau` → `En cours` → `Résolu`) modifiable, et un champ **note technicien** libre pour documenter la résolution (ex. "contacté l'utilisateur, résolu par reset VPN"). L'historique redevient un vrai outil de suivi, pas juste un journal en lecture seule.
+- **Alerte automatique sur risque détecté** : en plus du bloc rouge affiché à l'écran, un webhook (Slack ou Discord, optionnel via `ALERT_WEBHOOK_URL`) peut notifier un administrateur senior dès qu'un ticket est qualifié à risque — rend l'escalade prévue par le prompt système réellement actionnable, pas juste visuelle.
 - Le **sélecteur de modèle Gemini** (2.0, 2.5, 3.1, ou saisie libre) est conservé, sa valeur est simplement transmise au backend.
 
 ## Cas de test
@@ -83,6 +85,9 @@ cp .env.example .env   # puis renseigner GEMINI_API_KEY
 docker compose up --build
 ```
 Ouvrir http://localhost:3000. Les données (historique des tickets) sont conservées entre redémarrages grâce à un volume Docker nommé.
+
+### Alerte webhook (optionnelle)
+Pour recevoir une notification Slack ou Discord dès qu'un ticket à risque est créé, renseigner `ALERT_WEBHOOK_URL` dans `.env` avec l'URL d'un webhook entrant (Slack : *Incoming Webhooks* dans les paramètres d'app ; Discord : *Paramètres du salon → Intégrations → Webhooks*). Laisser vide désactive simplement l'alerte, le reste de l'app fonctionne normalement.
 
 ### Procédure de test
 1. Cliquer sur un des 3 boutons de cas de test (ou saisir un message), puis "Nettoyer le ticket" — le test se fait via l'interface web servie par le backend (plus besoin de saisir de clé API, elle est configurée côté serveur).

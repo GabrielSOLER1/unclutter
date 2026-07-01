@@ -1,5 +1,5 @@
 const express = require('express');
-const { getHistory, getTicketById, deleteTicket, deleteAllTickets } = require('../db');
+const { getHistory, getTicketById, deleteTicket, deleteAllTickets, updateTicket } = require('../db');
 
 const router = express.Router();
 
@@ -14,6 +14,19 @@ router.get('/history/:id', (req, res) => {
     return res.status(404).json({ error: 'Ticket introuvable.' });
   }
   res.json(ticket);
+});
+
+router.patch('/history/:id', (req, res) => {
+  const { statut, noteTechnicien } = req.body || {};
+  try {
+    const ticket = updateTicket(req.params.id, { statut, noteTechnicien });
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket introuvable.' });
+    }
+    res.json(ticket);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 router.delete('/history/:id', (req, res) => {

@@ -6,6 +6,7 @@ services:
       - "3000:3000"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL}
       - PORT=3000
     env_file:
       - .env

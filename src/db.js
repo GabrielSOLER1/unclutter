@@ -26,11 +26,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tickets_priorite    ON tickets(priorite);
 `);
 
+// Migration légère : ajoute les colonnes manquantes sans toucher aux données
+// existantes (utile pour une base créée par une version antérieure du schéma).
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!cols.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('tickets', 'statut', "TEXT NOT NULL DEFAULT 'Nouveau'");
+ensureColumn('tickets', 'note_technicien', 'TEXT');
+
+const STATUTS = ['Nouveau', 'En cours', 'Résolu'];
+
 const stmtInsert = db.prepare(`
-  INSERT INTO tickets (created_at, raw_message, model, categorie, priorite, resume, questions_json, exploitable, risque)
-  VALUES (@created_at, @raw_message, @model, @categorie, @priorite, @resume, @questions_json, @exploitable, @risque)
+  INSERT INTO tickets (created_at, raw_message, model, categorie, priorite, resume, questions_json, exploitable, risque, statut)
+  VALUES (@created_at, @raw_message, @model, @categorie, @priorite, @resume, @questions_json, @exploitable, @risque, @statut)
 `);
 const stmtGetById = db.prepare('SELECT * FROM tickets WHERE id = ?');
+const stmtUpdate = db.prepare(`
+  UPDATE tickets SET statut = COALESCE(@statut, statut), note_technicien = COALESCE(@note_technicien, note_technicien)
+  WHERE id = @id
+`);
 const stmtHistory = db.prepare('SELECT * FROM tickets ORDER BY created_at DESC LIMIT ? OFFSET ?');
 const stmtCount = db.prepare('SELECT COUNT(*) AS n FROM tickets');
 const stmtAll = db.prepare('SELECT * FROM tickets ORDER BY created_at DESC');
@@ -53,7 +70,9 @@ function rowToTicket(row) {
     resume: row.resume,
     questions: row.questions_json ? JSON.parse(row.questions_json) : [],
     exploitable: !!row.exploitable,
-    risque: row.risque
+    risque: row.risque,
+    statut: row.statut,
+    noteTechnicien: row.note_technicien
   };
 }
 
@@ -68,9 +87,23 @@ function insertTicket({ rawMessage, model, categorie, priorite, resume, question
     resume: resume ?? null,
     questions_json: JSON.stringify(Array.isArray(questions) ? questions : []),
     exploitable: exploitable ? 1 : 0,
-    risque: risque ?? null
+    risque: risque ?? null,
+    statut: STATUTS[0]
   });
   return rowToTicket(stmtGetById.get(info.lastInsertRowid));
+}
+
+function updateTicket(id, { statut, noteTechnicien } = {}) {
+  if (statut !== undefined && !STATUTS.includes(statut)) {
+    throw new Error(`Statut invalide (attendu : ${STATUTS.join(', ')}).`);
+  }
+  if (!stmtGetById.get(id)) return null;
+  stmtUpdate.run({
+    id,
+    statut: statut ?? null,
+    note_technicien: noteTechnicien !== undefined ? noteTechnicien : null
+  });
+  return rowToTicket(stmtGetById.get(id));
 }
 
 function getTicketById(id) {
@@ -117,4 +150,4 @@ function deleteAllTickets() {
   return info.changes;
 }
 
-module.exports = { insertTicket, getTicketById, getHistory, getAllTickets, getStats, deleteTicket, deleteAllTickets };
+module.exports = { insertTicket, getTicketById, getHistory, getAllTickets, getStats, deleteTicket, deleteAllTickets, updateTicket, STATUTS };

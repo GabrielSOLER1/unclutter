@@ -12,7 +12,7 @@ function csvEscape(value) {
 }
 
 function toCsv(tickets) {
-  const headers = ['id', 'createdAt', 'model', 'categorie', 'priorite', 'resume', 'questions', 'exploitable', 'risque', 'rawMessage'];
+  const headers = ['id', 'createdAt', 'model', 'categorie', 'priorite', 'statut', 'resume', 'questions', 'exploitable', 'risque', 'noteTechnicien', 'rawMessage'];
   const lines = [headers.join(',')];
   for (const t of tickets) {
     const row = [
@@ -21,10 +21,12 @@ function toCsv(tickets) {
       t.model,
       t.categorie,
       t.priorite,
+      t.statut,
       t.resume,
       (t.questions || []).join(' | '),
       t.exploitable ? 'oui' : 'non',
       t.risque || '',
+      t.noteTechnicien || '',
       t.rawMessage
     ];
     lines.push(row.map(csvEscape).join(','));
