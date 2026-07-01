@@ -228,9 +228,6 @@ Le fichier `unclutter.html` à la racine du dépôt est le prototype initial, en
 
 ## Contribution de chaque membre
 
-À compléter par le groupe, par exemple :
-
-- Nom 1 : prompt système et cas de test.
-- Nom 2 : interface et intégration de l'API.
-- Nom 3 : backend, base de données et conteneurisation.
-- Nom 4 : documentation et pitch.
+- Gabriel SOLER : backend, interface et intégration de l'API.
+- Ange CAPONE : démonstration du déploiement via Docker (clone du projet et build pour le faire fonctionner).
+- Kylian BORIES : documentation, fourniture de la clé API et participation active au brainstorming.
