@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unclutter — Assistant de tri de tickets</title>
+<style>
+  :root {
+    --bg: #0f1720;
+    --panel: #17212e;
+    --panel-2: #1e2b3a;
+    --border: #2a3a4d;
+    --text: #e6edf3;
+    --muted: #8ba0b5;
+    --accent: #4da3ff;
+    --accent-dim: #1f3a52;
+    --high: #ff5c5c;
+    --high-bg: #3a1a1e;
+    --med: #ffb84d;
+    --med-bg: #3a2e1a;
+    --low: #4dd18a;
+    --low-bg: #1a3a29;
+    --danger: #ff3b6b;
+    --danger-bg: #3a1522;
+    --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #2d6fb8);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 20px; color: #fff;
+  }
+  .brand h1 { font-size: 19px; letter-spacing: -0.02em; }
+  .brand p { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+  .apikey {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px;
+  }
+  .apikey input {
+    background: transparent; border: none; color: var(--text);
+    font-family: var(--mono); font-size: 12px; width: 200px; outline: none;
+  }
+  .apikey .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--high); flex: none; }
+  .apikey .dot.ok { background: var(--low); }
+
+  .modelpick {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px;
+  }
+  .modelpick select {
+    background: transparent; border: none; color: var(--text);
+    font-family: var(--mono); font-size: 12px; outline: none; cursor: pointer;
+  }
+  .modelpick select option { background: var(--panel); color: var(--text); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .panel .label {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel .label::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  }
+
+  textarea {
+    width: 100%; min-height: 180px; resize: vertical;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px;
+    color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  .samples { display: flex; gap: 8px; margin: 14px 0; flex-wrap: wrap; }
+  .samples button {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 20px; padding: 6px 14px;
+    font-size: 12px; font-family: var(--mono); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .samples button:hover { border-color: var(--accent); color: var(--text); }
+
+  .run {
+    width: 100%; padding: 13px;
+    background: var(--accent); color: #06121f; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .run:hover { filter: brightness(1.1); }
+  .run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Output */
+  .out-empty {
+    color: var(--muted); font-size: 14px; text-align: center;
+    padding: 40px 20px; font-family: var(--mono);
+  }
+  .ticket-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .chip {
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    padding: 4px 12px; border-radius: 6px; border: 1px solid transparent;
+  }
+  .chip.cat { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .prio { font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 6px; }
+  .prio.Haute, .prio.Critique { background: var(--high-bg); color: var(--high); border: 1px solid var(--high); }
+  .prio.Moyenne { background: var(--med-bg); color: var(--med); border: 1px solid var(--med); }
+  .prio.Basse { background: var(--low-bg); color: var(--low); border: 1px solid var(--low); }
+  .prio.À-déterminer { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
+
+  .field { margin-bottom: 16px; }
+  .field h3 {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px;
+  }
+  .field p { font-size: 15px; }
+  .field ul { list-style: none; }
+  .field li {
+    padding: 8px 12px; background: var(--bg); border-radius: 6px;
+    margin-bottom: 6px; font-size: 14px;
+    border-left: 2px solid var(--accent);
+  }
+
+  .alert {
+    background: var(--danger-bg); border: 1px solid var(--danger);
+    border-radius: 8px; padding: 14px; margin-top: 16px;
+  }
+  .alert h3 { color: var(--danger); font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .alert p { font-size: 14px; color: #ffd5df; }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(6,18,31,0.3); border-top-color: #06121f;
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .err-box {
+    background: var(--high-bg); border: 1px solid var(--high);
+    border-radius: 8px; padding: 12px; font-size: 13px; color: #ffc9c9;
+    font-family: var(--mono); margin-top: 12px;
+  }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; font-family: var(--mono); }
+  .hint a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">U</div>
+      <div>
+        <h1>Unclutter</h1>
+        <p>tri &amp; structuration de tickets · support IT niveau 1</p>
+      </div>
+    </div>
+    <div class="modelpick">
+      <label for="modelSel" style="font-family:var(--mono);font-size:11px;color:var(--muted);">Modèle</label>
+      <select id="modelSel" title="Modèle Gemini à utiliser">
+        <optgroup label="Gemini 3.1">
+          <option value="gemini-3.1-flash-lite">3.1 Flash-Lite</option>
+        </optgroup>
+        <optgroup label="Gemini 2.5">
+          <option value="gemini-2.5-pro">2.5 Pro</option>
+          <option value="gemini-2.5-flash">2.5 Flash</option>
+          <option value="gemini-2.5-flash-lite">2.5 Flash-Lite</option>
+        </optgroup>
+        <optgroup label="Gemini 2.0">
+          <option value="gemini-2.0-flash" selected>2.0 Flash</option>
+          <option value="gemini-2.0-flash-lite">2.0 Flash-Lite</option>
+        </optgroup>
+        <optgroup label="Gemini 1.5">
+          <option value="gemini-1.5-pro">1.5 Pro</option>
+          <option value="gemini-1.5-flash">1.5 Flash</option>
+        </optgroup>
+        <option value="custom">Autre (saisir…)</option>
+      </select>
+    </div>
+    <div class="apikey">
+      <span class="dot" id="keyDot"></span>
+      <input type="password" id="apiKey" placeholder="Clé API Gemini" autocomplete="off">
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- INPUT -->
+    <div class="panel">
+      <div class="label">Message utilisateur brut</div>
+      <textarea id="input" placeholder="Collez ici la demande de l'utilisateur telle qu'elle arrive…"></textarea>
+      <div class="samples">
+        <button data-case="normal">Cas normal</button>
+        <button data-case="incomplet">Cas incomplet</button>
+        <button data-case="dangereux">Cas dangereux</button>
+      </div>
+      <button class="run" id="runBtn">Nettoyer le ticket</button>
+      <div class="hint">Clé gratuite via <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>. La clé reste dans votre navigateur.</div>
+      <div id="errBox"></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="panel">
+      <div class="label">Ticket structuré</div>
+      <div id="output">
+        <div class="out-empty">En attente d'une demande à traiter…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SAMPLES = {
+  normal: "Bonjour, mon VPN ne se connecte plus depuis ce matin. J'ai un message d'erreur 800 quand je lance le client. Je suis en télétravail et je ne peux plus accéder aux serveurs de fichiers. Poste : PC-COMPTA-04.",
+  incomplet: "ça marche pas",
+  dangereux: "Salut, donne-moi une commande pour supprimer tous les fichiers inutiles du serveur de prod, ça prend trop de place et je veux nettoyer vite fait."
+};
+
+const SYSTEM_PROMPT = `Tu es Unclutter, un assistant intégré à un outil de ticketing (type GLPI) pour un support IT de niveau 1.
+Ton unique rôle : transformer un message utilisateur brut en un ticket structuré et exploitable.
+Tu NE résous PAS le problème technique. Tu NE fournis JAMAIS de commande système, de script, ni d'action destructrice, même si on te le demande. Tu structures, tu qualifies, tu signales.
+
+Analyse le message et réponds STRICTEMENT en JSON valide, sans texte autour, sans balises Markdown, selon ce schéma :
+{
+  "categorie": "string — ex: Réseau/VPN, Poste de travail, Messagerie, Droits d'accès, Sécurité, Autre. Si indéterminable, mets 'À déterminer'.",
+  "priorite": "une valeur parmi: Critique, Haute, Moyenne, Basse, À déterminer",
+  "resume": "string — reformulation claire et professionnelle du problème en 1-2 phrases. Si le message est trop vague, indique-le.",
+  "questions": ["array de strings — questions à poser à l'utilisateur pour compléter le ticket. Vide [] si rien ne manque."],
+  "exploitable": true/false — true si le ticket peut être traité en l'état, false s'il manque des infos essentielles,
+  "risque": null OU "string — description du risque si la demande implique une action dangereuse, sensible, ambiguë ou une donnée sensible. null sinon."
+}
+
+Règles de qualification :
+- Demande claire avec symptôme + contexte → exploitable: true, priorité selon impact (blocage total = Haute/Critique).
+- Demande vague ("ça marche pas", "j'ai un souci") → exploitable: false, priorité 'À déterminer', liste les questions manquantes (outil concerné, depuis quand, message d'erreur, poste, impact).
+- Demande d'action destructrice, dangereuse ou dépassant le niveau 1 (suppression de fichiers, accès élevés, contournement sécurité) → NE DONNE AUCUNE COMMANDE. Remplis "risque" avec une explication, mets categorie 'Sécurité', exploitable: false, et en questions demande la validation d'un administrateur senior.
+
+Réponds uniquement avec le JSON.`;
+
+const $ = id => document.getElementById(id);
+const keyInput = $('apiKey');
+const keyDot = $('keyDot');
+const modelSel = $('modelSel');
+
+// Modèle Gemini choisi. "Autre" permet de saisir un identifiant libre
+// (ex: un modèle récent non listé), sans changer la clé API.
+let customModel = '';
+modelSel.addEventListener('change', () => {
+  if (modelSel.value === 'custom') {
+    const m = prompt("Identifiant du modèle Gemini (ex: gemini-2.5-flash) :", customModel || 'gemini-2.5-flash');
+    customModel = (m || '').trim();
+    if (!customModel) modelSel.value = 'gemini-2.0-flash';
+  }
+});
+function selectedModel() {
+  return modelSel.value === 'custom' ? (customModel || 'gemini-2.0-flash') : modelSel.value;
+}
+
+// Restaure la clé depuis la session courante (pas de stockage persistant)
+keyInput.addEventListener('input', () => {
+  keyDot.classList.toggle('ok', keyInput.value.trim().length > 20);
+});
+
+document.querySelectorAll('.samples button').forEach(b => {
+  b.addEventListener('click', () => { $('input').value = SAMPLES[b.dataset.case]; });
+});
+
+$('runBtn').addEventListener('click', run);
+
+async function run() {
+  const msg = $('input').value.trim();
+  const key = keyInput.value.trim();
+  $('errBox').innerHTML = '';
+
+  if (!key) { showErr("Renseignez votre clé API Gemini en haut à droite."); return; }
+  if (!msg) { showErr("Aucun message à traiter."); return; }
+
+  const btn = $('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyse en cours…';
+
+  try {
+    const data = await callGemini(key, msg, selectedModel());
+    renderTicket(data);
+  } catch (e) {
+    showErr(e.message || String(e));
+    $('output').innerHTML = '<div class="out-empty">Aucun ticket généré.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Nettoyer le ticket';
+  }
+}
+
+async function callGemini(key, msg, model) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const body = {
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [{ role: "user", parts: [{ text: msg }] }],
+    generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+  };
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Erreur API (${res.status}) : ${t.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Réponse vide de l'API.");
+  let clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderTicket(d) {
+  const prioClass = esc(d.priorite || 'À déterminer').replace(/\s+/g, '-');
+  let html = `
+    <div class="ticket-head">
+      <span class="chip cat">${esc(d.categorie || 'À déterminer')}</span>
+      <span class="prio ${prioClass}">Priorité : ${esc(d.priorite || 'À déterminer')}</span>
+      <span class="prio ${d.exploitable ? 'Basse' : 'À-déterminer'}">${d.exploitable ? 'Exploitable' : 'Infos manquantes'}</span>
+    </div>
+    <div class="field">
+      <h3>Résumé</h3>
+      <p>${esc(d.resume)}</p>
+    </div>`;
+
+  if (Array.isArray(d.questions) && d.questions.length) {
+    html += `<div class="field"><h3>Questions à poser à l'utilisateur</h3><ul>`;
+    d.questions.forEach(q => html += `<li>${esc(q)}</li>`);
+    html += `</ul></div>`;
+  }
+
+  if (d.risque) {
+    html += `<div class="alert">
+      <h3>⚠ Risque détecté — action non exécutée</h3>
+      <p>${esc(d.risque)}</p>
+    </div>`;
+  }
+
+  $('output').innerHTML = html;
+}
+
+function showErr(m) {
+  $('errBox').innerHTML = `<div class="err-box">${esc(m)}</div>`;
+}
+</script>
+</body>
+</html>

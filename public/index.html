@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unclutter — Assistant de tri de tickets</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">U</div>
+      <div>
+        <h1>Unclutter</h1>
+        <p>tri &amp; structuration de tickets · support IT niveau 1</p>
+      </div>
+    </div>
+    <div class="modelpick">
+      <label for="modelSel" style="font-family:var(--mono);font-size:11px;color:var(--muted);">Modèle</label>
+      <select id="modelSel" title="Modèle Gemini à utiliser">
+        <optgroup label="Gemini 3.1">
+          <option value="gemini-3.1-flash-lite">3.1 Flash-Lite</option>
+        </optgroup>
+        <optgroup label="Gemini 2.5">
+          <option value="gemini-2.5-pro">2.5 Pro</option>
+          <option value="gemini-2.5-flash">2.5 Flash</option>
+          <option value="gemini-2.5-flash-lite">2.5 Flash-Lite</option>
+        </optgroup>
+        <optgroup label="Gemini 2.0">
+          <option value="gemini-2.0-flash" selected>2.0 Flash</option>
+          <option value="gemini-2.0-flash-lite">2.0 Flash-Lite</option>
+        </optgroup>
+        <optgroup label="Gemini 1.5">
+          <option value="gemini-1.5-pro">1.5 Pro</option>
+          <option value="gemini-1.5-flash">1.5 Flash</option>
+        </optgroup>
+        <option value="custom">Autre (saisir…)</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- STATS -->
+  <div class="panel panel-stats">
+    <div class="label">Tableau de bord</div>
+    <div class="stats-row" id="statsRow">
+      <div class="stat-item"><strong>—</strong>tickets traités</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- INPUT -->
+    <div class="panel">
+      <div class="label">Message utilisateur brut</div>
+      <textarea id="input" placeholder="Collez ici la demande de l'utilisateur telle qu'elle arrive…"></textarea>
+      <div class="samples">
+        <button data-case="normal">Cas normal</button>
+        <button data-case="incomplet">Cas incomplet</button>
+        <button data-case="dangereux">Cas dangereux</button>
+      </div>
+      <button class="run" id="runBtn">Nettoyer le ticket</button>
+      <div class="hint">La clé API Gemini est configurée côté serveur — rien à saisir ici.</div>
+      <div id="errBox"></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="panel">
+      <div class="label">Ticket structuré</div>
+      <div id="output">
+        <div class="out-empty">En attente d'une demande à traiter…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="panel panel-history">
+    <div class="label">Historique</div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">Aucun ticket traité pour l'instant.</div>
+    </div>
+    <div class="export-buttons">
+      <button id="exportJson">Exporter JSON</button>
+      <button id="exportCsv">Exporter CSV</button>
+      <button id="clearHistory" class="danger">Vider l'historique</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js" defer></script>
+</body>
+</html>
