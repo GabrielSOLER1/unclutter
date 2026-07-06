@@ -275,8 +275,6 @@ const keyInput = $('apiKey');
 const keyDot = $('keyDot');
 const modelSel = $('modelSel');
 
-// Modèle Gemini choisi. "Autre" permet de saisir un identifiant libre
-// (ex: un modèle récent non listé), sans changer la clé API.
 let customModel = '';
 modelSel.addEventListener('change', () => {
   if (modelSel.value === 'custom') {
